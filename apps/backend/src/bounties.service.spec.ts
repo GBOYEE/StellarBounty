@@ -99,12 +99,33 @@ describe('BountiesService', () => {
     });
   });
 
-  it('findAll returns bounties ordered newest first', async () => {
+  it('findAll returns paginated bounties ordered newest first', async () => {
     const bounties = [createBounty({ id: 'new' }), createBounty({ id: 'old' })];
-    repository.find!.mockResolvedValueOnce(bounties);
+    repository.findAndCount!.mockResolvedValueOnce([bounties, 2]);
 
-    await expect(service.findAll()).resolves.toBe(bounties);
-    expect(repository.find).toHaveBeenCalledWith({ order: { createdAt: 'DESC' } });
+    await expect(service.findAll(1, 20)).resolves.toEqual({
+      data: bounties,
+      total: 2,
+      page: 1,
+      pageSize: 20,
+      totalPages: 1,
+    });
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      order: { createdAt: 'DESC' },
+      skip: 0,
+      take: 20,
+    });
+  });
+
+  it('findAll calculates correct skip for page 2', async () => {
+    repository.findAndCount!.mockResolvedValueOnce([[], 10]);
+
+    await service.findAll(2, 5);
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      order: { createdAt: 'DESC' },
+      skip: 5,
+      take: 5,
+    });
   });
 
   describe('findOne', () => {
